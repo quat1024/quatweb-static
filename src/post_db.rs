@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Lines;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -16,6 +17,12 @@ use crate::recursively_iterate_directory;
 
 #[derive(Content, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Default, Debug)]
 pub struct Tag(pub String);
+
+impl AsRef<String> for Tag {
+    fn as_ref(&self) -> &String {
+        &self.0
+    }
+}
 
 #[derive(Content)]
 pub struct Post {
@@ -57,31 +64,32 @@ pub struct PostDb {
 impl Post {
 	pub fn from_path(path: &Path) -> Result<Post> {
 		let file = fs::File::open(path)?;
-		let mut reader = BufReader::new(file);
+		let mut lines_reader = BufReader::new(file).lines();
 
-		let meta = PostMeta::read_meta(&path, &mut reader)?;
-		let rendered_html = Post::read_body(&mut reader)?;
+		let meta = PostMeta::read_meta(path, &mut lines_reader)?;
+		let rendered_html = Post::read_body(&mut lines_reader)?;
 
 		Ok(Post { meta, rendered_html })
 	}
 
-	pub fn read_body<B: BufRead>(reader: &mut B) -> Result<String> {
-		let mut rest = String::new();
-		reader.read_to_string(&mut rest)?;
-
+	pub fn read_body<B: BufRead>(lines_reader: &mut Lines<B>) -> Result<String> {
+		//Copy the entire rest of the file, because lmao Rust.
+		//Once I've turned my BufReader into a lines reader, I can't recover the original reader,
+		//and Lines doesn't implement Read or anything, it literally just has Debug and this line iterator available.
+		//(Tokio's reader can be converted back, via into_inner. Is this something the stdlib is missing for a reason?)
+		let rest = lines_reader.collect::<Result<Vec<String>, _>>()?.join("\n");
 		Ok(markdown::render_to_html(&rest))
 	}
 }
 
 impl PostMeta {
-	pub fn read_meta<B: BufRead>(input_path: &Path, reader: &mut B) -> Result<PostMeta> {
+	pub fn read_meta<B: BufRead>(input_path: &Path, line_reader: &mut Lines<B>) -> Result<PostMeta> {
 		let mut kv: HashMap<String, String> = HashMap::new();
 
 		//Parse out each line and toss it into a hashmap.
-		let mut line = String::new();
-		loop {
-			reader.read_line(&mut line)?;
-
+		for line in line_reader {
+			let line = line?;
+			
 			//Stop if I see three dashes. This consumes the line, preparing the reader for the post body
 			if line == "---" {
 				break;
@@ -160,5 +168,22 @@ impl PostDb {
 		}
 
 		Ok(PostDb { all_posts, posts_by_slug, posts_by_tag })
+	}
+	
+	pub fn get_by_id(&self, id: usize) -> Option<&Post> {
+		self.all_posts.get(id)
+	}
+	
+	pub fn tags(&self) -> impl Iterator<Item = &Tag> {
+		self.posts_by_tag.keys()
+	}
+	
+	//Super lameo cloning operation
+	pub fn get_by_tag(&self, tag: &Tag) -> Vec<&Post> {
+		if let Some(post_ids) = self.posts_by_tag.get(tag) {
+			post_ids.iter().map(|id| &self.all_posts[*id]).collect()
+		} else {
+			Vec::new()
+		}
 	}
 }

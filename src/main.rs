@@ -10,6 +10,7 @@ use ramhorns::Content;
 
 use crate::post_db::Post;
 use crate::post_db::PostDb;
+use crate::post_db::Tag;
 
 mod date;
 mod markdown;
@@ -27,7 +28,7 @@ fn main() -> Result<()> {
 	//actually don't, i'm too afraid of deleting something important lol
 	
 	//Copy static resources
-	copy_static(&in_dir.join("static"), &out_dir.join("static")).context("copying static resources")?;
+	copy_static(&in_dir.join("static"), &out_dir).context("copying static resources")?;
 
 	//Build template engine
 	eprintln!("Building template engine");
@@ -39,6 +40,16 @@ fn main() -> Result<()> {
 	//write out the pages
 	write_landing(&ramhorns, &post_db, &out_dir)?;
 	write_discord(&ramhorns, &out_dir)?;
+	
+	let posts_dir = out_dir.join("posts");
+	fs::create_dir_all(&posts_dir).context("creating posts dir in output")?;
+	write_post_index(&ramhorns, &post_db, &posts_dir)?;
+	write_posts(&ramhorns, &post_db, &posts_dir)?;
+	
+	let tags_dir = out_dir.join("tags");
+	fs::create_dir_all(&tags_dir).context("creating tags dir in output")?;
+	write_tag_index(&ramhorns, &post_db, &tags_dir)?;
+	write_tags(&ramhorns, &post_db, &tags_dir)?;
 	
 	Ok(())
 }
@@ -96,22 +107,9 @@ fn copy_static(in_dir: &Path, out_dir: &Path) -> Result<()> {
 	Ok(())
 }
 
-//Quick trait to make grabbing Ramhorns templates a tiny bit nicer
-trait Yeet {
-	fn render_and_write<C: Content>(&self, name: &'static str, context: &C, out_file: &Path) -> Result<()>;
-}
-
-impl Yeet for Ramhorns {
-	fn render_and_write<C: Content>(&self, name: &'static str, context: &C, out_file: &Path) -> Result<()> {
-        let template = self.get(name).context(format!("Missing template {}", name))?;
-		let rendered = template.render(context);
-		fs::write(out_file, rendered)?;
-		Ok(())
-    }
-}
-
 fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Result<()> {
 	eprintln!("Writing landing page");
+	let template = templates.get("index.template.html").context("Missing template")?;
 	
 	#[derive(Content)]
 	struct TemplatingContext<'a> {
@@ -122,11 +120,124 @@ fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Resu
 		posts: &post_db.all_posts.iter().filter(|post| !post.meta.draft).take(5).collect()
 	};
 	
-	templates.render_and_write("index.template.html", &ctx, &out_dir.join("index.html"))?;
+	let rendered = template.render(&ctx);
+	fs::write(out_dir.join("index.html"), rendered)?;
 	Ok(())
 }
 
 fn write_discord(templates: &Ramhorns, out_dir: &Path) -> Result<()> {
 	eprintln!("Writing discord page");
-	templates.render_and_write("discord.template.html", &(), &out_dir.join("discord.html"))
+	let template = templates.get("discord.template.html").context("Missing template")?;
+	
+	let rendered = template.render(&());
+	fs::write(out_dir.join("discord.html"), rendered)?;
+	Ok(())
+}
+
+fn write_post_index(templates: &Ramhorns, post_db: &PostDb, posts_dir: &Path) -> Result<()> {
+	eprintln!("Writing post index page");
+	let template = templates.get("post_index.template.html").context("Missing post_index.template.html")?;
+	
+	#[derive(Content)]
+	struct TemplatingContext<'a> {
+		posts: &'a Vec<Post>,
+		count: usize,
+		many: bool
+	}
+	
+	let rendered = template.render(&TemplatingContext {
+		posts: &post_db.all_posts,
+		count: post_db.all_posts.len(),
+		many: post_db.all_posts.len() > 1
+	});
+	
+	fs::write(posts_dir.join("index.html"), rendered)?;
+	
+	Ok(())
+}
+
+fn write_posts(templates: &Ramhorns, post_db: &PostDb, posts_dir: &Path) -> Result<()> {
+	eprintln!("Writing post pages");
+	
+	let template = templates.get("post.template.html").context("Missing post.template.html")?;
+	
+	#[derive(Content)]
+	struct TemplatingContext<'a> {
+		post: &'a Post,
+		newer_post: &'a Option<&'a Post>,
+		older_post: &'a Option<&'a Post>,
+	}
+	
+	for post in post_db.all_posts.iter() {
+		eprintln!("Writing post {}", &post.meta.title);
+		
+		let rendered = template.render(&TemplatingContext {
+			post,
+			newer_post: &post.meta.newer_post.and_then(|id| post_db.get_by_id(id)),
+			older_post: &post.meta.older_post.and_then(|id| post_db.get_by_id(id)),
+		});
+		
+		//rrrrarf
+		let mut out_path = posts_dir.join(&post.meta.slug);
+		out_path.set_extension("html");
+		
+		fs::write(out_path, rendered)?;
+	}
+	
+	Ok(())
+}
+
+fn write_tag_index(templates: &Ramhorns, post_db: &PostDb, tags_dir: &Path) -> Result<()> {
+	eprintln!("Writing tag index page");
+	
+	let template = templates.get("tag_index.template.html").context("Missing tag_index.template.html")?;
+	
+	#[derive(Content)]
+	struct TemplatingContext<'a> {
+		tags: &'a Vec<&'a Tag>,
+		count: usize,
+		many: bool,
+	}
+	
+	let tags = &post_db.tags().collect();
+	let rendered = template.render(&TemplatingContext {
+		tags,
+		count: tags.len(),
+		many: tags.len() > 1
+	});
+	
+	fs::write(tags_dir.join("index.html"), rendered)?;
+	Ok(())
+}
+
+fn write_tags(templates: &Ramhorns, post_db: &PostDb, tags_dir: &Path) -> Result<()> {
+	eprintln!("Writing tag pages");
+	
+	let template = templates.get("tag.template.html").context("Missing tag.template.html")?;
+	
+	#[derive(Content)]
+	struct TemplatingContext<'a> {
+		posts: &'a Vec<&'a Post>,
+		count: usize,
+		many: bool,
+		tag: &'a Tag
+	}
+	
+	for tag in post_db.tags() {
+		let posts = &post_db.get_by_tag(tag);
+		
+		let rendered = template.render(&TemplatingContext {
+			posts,
+			count: posts.len(),
+			many: posts.len() > 1,
+			tag
+		});
+		
+		//Tags may contain periods, so set_extension stuff will break.
+		let out_path = tags_dir.join([tag.as_ref(), ".html"].concat());
+		
+		fs::write(out_path, rendered)?;
+	}
+	
+	Ok(())
 }
