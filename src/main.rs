@@ -27,7 +27,6 @@ fn main() -> Result<()> {
 	//actually don't, i'm too afraid of deleting something important lol
 	
 	//Copy static resources
-	eprintln!("Copying static resources");
 	copy_static(&in_dir.join("static"), &out_dir.join("static")).context("copying static resources")?;
 
 	//Build template engine
@@ -35,7 +34,6 @@ fn main() -> Result<()> {
 	let ramhorns = Ramhorns::from_folder(in_dir.join("templates")).context("initializing Ramhorns")?;
 	
 	//Build post database
-	eprintln!("Building post database");
 	let post_db = PostDb::from_dir(&in_dir.join("posts")).context("building post database")?;
 
 	//write out the pages
@@ -64,21 +62,27 @@ pub fn recursively_iterate_directory(dir: &Path, callback: &mut dyn FnMut(&fs::D
 
 /// Copy files from the in_dir to the out_dir.
 fn copy_static(in_dir: &Path, out_dir: &Path) -> Result<()> {
+	eprintln!("Copying static resources");
+	
 	if !in_dir.exists() {
 		eprintln!("Not copying static files - {} does not exist.", in_dir.display());
 		return Ok(());
 	}
 
-	fs::create_dir_all(&out_dir).with_context(|| format!("creating static output directory at {}", out_dir.display()))?;
-
 	let prefix_len = in_dir.components().count();
 
-	recursively_iterate_directory(&in_dir, &mut |entry| {
+	recursively_iterate_directory(in_dir, &mut |entry| {
 		//Chop off the .../whatever/in/static/ component of the path
 		let dest_suffix = &entry.path().components().skip(prefix_len).collect::<PathBuf>();
 
 		//Glue it onto the end of the .../whatever/out/static/ path
 		let dest = &out_dir.join(dest_suffix);
+		
+		//Create the output directory. (Do it here, instead of before the loop, so subfolders exist.)
+		let mut dest_dir = dest.clone();
+		dest_dir.pop();
+		
+		fs::create_dir_all(&dest_dir).with_context(|| format!("creating static output directory at {}", dest_dir.display()))?;
 
 		//Perform the copy operation
 		let s = format!("Copying {} to {}", entry.path().display(), dest.display());
@@ -107,6 +111,8 @@ impl Yeet for Ramhorns {
 }
 
 fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Result<()> {
+	eprintln!("Writing landing page");
+	
 	#[derive(Content)]
 	struct TemplatingContext<'a> {
 		posts: &'a Vec<&'a Post>
@@ -121,5 +127,6 @@ fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Resu
 }
 
 fn write_discord(templates: &Ramhorns, out_dir: &Path) -> Result<()> {
+	eprintln!("Writing discord page");
 	templates.render_and_write("discord.template.html", &(), &out_dir.join("discord.html"))
 }

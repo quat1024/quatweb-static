@@ -124,6 +124,8 @@ impl PostMeta {
 
 impl PostDb {
 	pub fn from_dir(path: &Path) -> Result<PostDb> {
+		eprintln!("Building post database");
+		
 		let mut all_posts = Vec::new();
 
 		recursively_iterate_directory(path, &mut |entry| {
