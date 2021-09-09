@@ -1,0 +1,12 @@
+{{>shell_begin.template.html}}
+<h1>Post Index</h1>
+<p>{{#many}}All {{count}} posts!{{/many}}{{^many}}The post!{{/many}}</p>
+<p>See also: the <a href="/tags">tag index</a>.</p>
+<ul>
+	{{#posts}}
+	<li {{#draft}}style="opacity: 0.5"{{/draft}}>{{created_date}} - {{#draft}}(DRAFT){{/draft}} <a href="/posts/{{slug}}">{{post_title}}</a><br/>
+		{{description}}
+	</li>
+	{{/posts}}
+</ul>
+{{>shell_end.template.html}}

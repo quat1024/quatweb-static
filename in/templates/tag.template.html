@@ -1,0 +1,11 @@
+{{>shell_begin.template.html}}
+<h1>Posts under {{tag}}</h1>
+<p>{{#many}}All {{count}} posts <a href="/tags">tagged</a> with {{tag}}:{{/many}}{{^many}}The post <a href="/tags">tagged</a> with {{tag}}:{{/many}}</p>
+<ul>
+	{{#posts}}
+	<li {{#draft}}style="opacity: 0.5"{{/draft}}>{{created_date}} - {{#draft}}(DRAFT){{/draft}} <a href="/posts/{{slug}}">{{post_title}}</a><br/>
+		{{description}}
+	</li>
+	{{/posts}}
+</ul>
+{{>shell_end.template.html}}

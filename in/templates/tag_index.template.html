@@ -1,0 +1,10 @@
+{{>shell_begin.template.html}}
+<h1>Tag Index</h1>
+<p>{{#many}}All {{count}} tags!{{/many}}{{^many}}The tag!{{/many}}</p>
+<p>See also: the <a href="/posts">post index</a>.</p>
+{{#tags}}
+<ul>
+	<li><a href="/tags/{{0}}">{{0}}</a></li>
+</ul>
+{{/tags}}
+{{>shell_end.template.html}}

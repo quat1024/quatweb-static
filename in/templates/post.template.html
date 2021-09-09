@@ -1,0 +1,12 @@
+{{>shell_begin.template.html}}
+{{#post}}
+<h1>{{post_title}}</h1>
+<div class="byline">{{author}}, {{created_date}}{{#modified_date}}(updated {{modified_date}}){{/modified_date}}<br/>
+{{#tags}}<a href="/tags/{{0}}">{{0}}</a> {{/tags}}{{^tags}}Untagged{{/tags}}</div>
+{{#draft}}<center>- DRAFT POST -</center>{{/draft}}
+{{{content}}}
+<hr class="cool"/>
+{{/post}}
+{{#older_post}}<div style="text-align: left"><a href="/posts/{{slug}}">&larr; {{post_title}}</a><br/>{{/older_post}}
+{{#newer_post}}<div style="text-align: right"><a href="/posts/{{slug}}">{{post_title}} &rarr;</a>{{/newer_post}}
+{{>shell_end.template.html}}

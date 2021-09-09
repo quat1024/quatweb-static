@@ -22,7 +22,10 @@ fn main() -> Result<()> {
 	let out_dir = pwd.join("out");
 
 	eprintln!("In: {}\nOut: {}", in_dir.display(), out_dir.display());
-
+	
+	//Delete output dir...
+	//actually don't, i'm too afraid of deleting something important lol
+	
 	//Copy static resources
 	eprintln!("Copying static resources");
 	copy_static(&in_dir.join("static"), &out_dir.join("static")).context("copying static resources")?;
