@@ -220,7 +220,7 @@ fn write_tags(templates: &Ramhorns, post_db: &PostDb, tags_dir: &Path) -> Result
 		posts: &'a Vec<&'a Post>,
 		count: usize,
 		many: bool,
-		tag: &'a Tag
+		tag: &'a str
 	}
 	
 	for tag in post_db.tags() {
@@ -230,7 +230,7 @@ fn write_tags(templates: &Ramhorns, post_db: &PostDb, tags_dir: &Path) -> Result
 			posts,
 			count: posts.len(),
 			many: posts.len() > 1,
-			tag
+			tag: tag.as_ref()
 		});
 		
 		//Tags may contain periods, so set_extension stuff will break.
