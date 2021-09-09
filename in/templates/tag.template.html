@@ -4,7 +4,7 @@
 <ul>
 	{{#posts}}
 	<li {{#draft}}style="opacity: 0.5"{{/draft}}>{{created_date}} - {{#draft}}(DRAFT){{/draft}} <a href="/posts/{{slug}}">{{title}}</a><br/>
-		{{description}}
+		{{blurb}}
 	</li>
 	{{/posts}}
 </ul>
