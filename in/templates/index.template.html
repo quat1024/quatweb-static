@@ -8,11 +8,11 @@
 </section>
 <section>
 	<h2>Recent Posts</h2>
-	{{#posts}}
 	<ul>
-		<li>{{created_date}} - <a href="/posts/{{slug}}">{{title}}</a></li>
-	</ul>
+	{{#posts}}
+		<li>{{created_date}} <a href="/posts/{{slug}}">{{title}}</a></li>
 	{{/posts}}
+	</ul>
 	<a href="/posts/" style="display: block; text-align: right;">More Posts &gt;</a>
 </section>
 <section>
