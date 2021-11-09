@@ -126,7 +126,7 @@ fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Resu
 }
 
 fn write_discord(templates: &Ramhorns, out_dir: &Path) -> Result<()> {
-	eprintln!("Writing discord page");
+	eprintln!("Writing discord page(s)");
 	let template = templates.get("discord.template.html").context("Missing template")?;
 	let rendered = template.render(&());
 	
@@ -138,7 +138,7 @@ fn write_discord(templates: &Ramhorns, out_dir: &Path) -> Result<()> {
 	fs::write(folder.join("index.html"), &rendered)?;
 	
 	//But also write it to the old location. Can't hurt.
-	fs::write(out_dir.join("index.html"), rendered)?;
+	fs::write(out_dir.join("discord.html"), &rendered)?;
 	Ok(())
 }
 
