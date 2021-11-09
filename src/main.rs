@@ -42,12 +42,10 @@ fn main() -> Result<()> {
 	write_discord(&ramhorns, &out_dir)?;
 	
 	let posts_dir = out_dir.join("posts");
-	fs::create_dir_all(&posts_dir).context("creating posts dir in output")?;
 	write_post_index(&ramhorns, &post_db, &posts_dir)?;
 	write_posts(&ramhorns, &post_db, &posts_dir)?;
 	
 	let tags_dir = out_dir.join("tags");
-	fs::create_dir_all(&tags_dir).context("creating tags dir in output")?;
 	write_tag_index(&ramhorns, &post_db, &tags_dir)?;
 	write_tags(&ramhorns, &post_db, &tags_dir)?;
 	
@@ -71,6 +69,19 @@ pub fn recursively_iterate_directory(dir: &Path, callback: &mut dyn FnMut(&fs::D
 	Ok(())
 }
 
+/// fs::write but creates parent directories first.
+/// Signature copypasted from fs::write lol.
+pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> std::io::Result<()> {
+	fs::create_dir_all(path.as_ref().parent().expect("parent"))?;
+	fs::write(&path, &contents)
+}
+
+/// fs::copy but creates parent directories first.
+pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Result<u64> {
+	fs::create_dir_all(to.as_ref().parent().expect("parent"))?;
+	fs::copy(&from, &to)
+}
+
 /// Copy files from the in_dir to the out_dir.
 fn copy_static(in_dir: &Path, out_dir: &Path) -> Result<()> {
 	eprintln!("Copying static resources");
@@ -88,17 +99,11 @@ fn copy_static(in_dir: &Path, out_dir: &Path) -> Result<()> {
 
 		//Glue it onto the end of the .../whatever/out/static/ path
 		let dest = &out_dir.join(dest_suffix);
-		
-		//Create the output directory. (Do it here, instead of before the loop, so subfolders exist.)
-		let mut dest_dir = dest.clone();
-		dest_dir.pop();
-		
-		fs::create_dir_all(&dest_dir).with_context(|| format!("creating static output directory at {}", dest_dir.display()))?;
 
-		//Perform the copy operation
+		//Perform the copy
 		let s = format!("Copying {} to {}", entry.path().display(), dest.display());
 		eprintln!("{}", s);
-		fs::copy(entry.path(), dest).context(s)?;
+		copy(entry.path(), dest).context(s)?;
 
 		Ok(())
 	})
@@ -121,7 +126,7 @@ fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Resu
 	};
 	
 	let rendered = template.render(&ctx);
-	fs::write(out_dir.join("index.html"), rendered)?;
+	write(out_dir.join("index.html"), rendered)?;
 	Ok(())
 }
 
@@ -133,12 +138,10 @@ fn write_discord(templates: &Ramhorns, out_dir: &Path) -> Result<()> {
 	//Write to (out)/discord/index.html instead of (out)/discord.html.
 	//If a link ends in a trailing slash, like "https://highlysuspect.agency/discord/",
 	//Github Pages's router won't direct it to (out)/discord.html. Only works with a subfolder/index.html pair.
-	let folder = out_dir.join("discord");
-	fs::create_dir_all(&folder)?;
-	fs::write(folder.join("index.html"), &rendered)?;
+	write(out_dir.join("discord").join("index.html"), &rendered)?;
 	
 	//But also write it to the old location. Can't hurt.
-	fs::write(out_dir.join("discord.html"), &rendered)?;
+	write(out_dir.join("discord.html"), &rendered)?;
 	Ok(())
 }
 
@@ -159,7 +162,7 @@ fn write_post_index(templates: &Ramhorns, post_db: &PostDb, posts_dir: &Path) ->
 		many: post_db.all_posts.len() > 1
 	});
 	
-	fs::write(posts_dir.join("index.html"), rendered)?;
+	write(posts_dir.join("index.html"), rendered)?;
 	
 	Ok(())
 }
@@ -185,11 +188,7 @@ fn write_posts(templates: &Ramhorns, post_db: &PostDb, posts_dir: &Path) -> Resu
 			older_post: &post.meta.older_post.and_then(|id| post_db.get_by_id(id)),
 		});
 		
-		//rrrrarf
-		let mut out_path = posts_dir.join(&post.meta.slug);
-		out_path.set_extension("html");
-		
-		fs::write(out_path, rendered)?;
+		write(posts_dir.join(&post.meta.slug).join("index.html"), rendered)?;
 	}
 	
 	Ok(())
@@ -214,7 +213,7 @@ fn write_tag_index(templates: &Ramhorns, post_db: &PostDb, tags_dir: &Path) -> R
 		many: tags.len() > 1
 	});
 	
-	fs::write(tags_dir.join("index.html"), rendered)?;
+	write(tags_dir.join("index.html"), rendered)?;
 	Ok(())
 }
 
@@ -241,10 +240,7 @@ fn write_tags(templates: &Ramhorns, post_db: &PostDb, tags_dir: &Path) -> Result
 			tag: tag.as_ref()
 		});
 		
-		//Tags may contain periods, so set_extension stuff will break.
-		let out_path = tags_dir.join([tag.as_ref(), ".html"].concat());
-		
-		fs::write(out_path, rendered)?;
+		write(tags_dir.join(tag.as_ref()).join("index.html"), rendered)?;
 	}
 	
 	Ok(())
