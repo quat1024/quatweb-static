@@ -128,9 +128,17 @@ fn write_landing(templates: &Ramhorns, post_db: &PostDb, out_dir: &Path) -> Resu
 fn write_discord(templates: &Ramhorns, out_dir: &Path) -> Result<()> {
 	eprintln!("Writing discord page");
 	let template = templates.get("discord.template.html").context("Missing template")?;
-	
 	let rendered = template.render(&());
-	fs::write(out_dir.join("discord.html"), rendered)?;
+	
+	//Write to (out)/discord/index.html instead of (out)/discord.html.
+	//If a link ends in a trailing slash, like "https://highlysuspect.agency/discord/",
+	//Github Pages's router won't direct it to (out)/discord.html. Only works with a subfolder/index.html pair.
+	let folder = out_dir.join("discord");
+	fs::create_dir_all(&folder)?;
+	fs::write(folder.join("index.html"), &rendered)?;
+	
+	//But also write it to the old location. Can't hurt.
+	fs::write(out_dir.join("index.html"), rendered)?;
 	Ok(())
 }
 
