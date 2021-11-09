@@ -69,9 +69,9 @@ Strictly speaking it's optional but I do recommend doing this.
 
 Since Loom 0.8 only runs on Java 16, you will need to update your CI file to use Java 16. Here, go [copy-paste mine](https://github.com/quat1024/AutoThirdPerson/blob/bb387e048a1463cb0c0f58112a360048ed1dd204/.github/workflows/build.yml).
 
-# part 2: running `migrateMappings`
+# part 2: running migrateMappings
 
-See https://fabricmc.net/versions.html. The provided gradle incantation will remap the sources in `/src/main/java` and put them in `/remappedSrc`. It's not done in-place, but since you *are* using version control (right 👀) it's okay to overwrite your old sources.
+See [the Fabric versions page](https://fabricmc.net/versions.html). The provided gradle incantation will remap the sources in `/src/main/java` and put them in `/remappedSrc`. It's not done in-place, but since you *are* using version control (right 👀) it's okay to overwrite your old sources.
 
 You can skip this if your mod is really small; a couple missing mappings here-and-there aren't hard to manually fix. They don't crop up very often.
 
