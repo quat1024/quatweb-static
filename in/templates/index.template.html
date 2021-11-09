@@ -4,16 +4,15 @@
 	<p>I'm quaternary, but you can call me quat. I'm 21, a dragon*, and go by it/its.</p>
 	<p>My main work these days is in <a href="https://www.curseforge.com/members/quat1024/projects" target="_blank">Minecraft mods</a> and <a href="https://steamcommunity.com/id/quaternary/myworkshopfiles/" target="_blank">puzzle games</a>. Also generally being a nuisance online.</p>
 	<p>Nice to meet you, though! I have a <a href="/discord">Discord</a> to pop into, if you want to hang out or talk MC mods. For now. May jump ship.</p>
-	<div style="text-align: right; font-size:60%">*Yes, really.</div>
 </section>
 <section>
 	<h2>Recent Posts</h2>
 	<ul>
 	{{#posts}}
-		<li>{{created_date}} <a href="/posts/{{slug}}">{{title}}</a></li>
+		<li><span class="date">{{created_date}}</span> <a href="/posts/{{slug}}">{{title}}</a></li>
 	{{/posts}}
 	</ul>
-	<a href="/posts/" style="display: block; text-align: right;">More Posts &gt;</a>
+	<p><a href="/posts/" style="display: block; text-align: right;">More Posts &gt;</a></p>
 </section>
 <section>
 	<h2>Links</h2>
@@ -27,4 +26,5 @@
 		<li><a href="https://steamcommunity.com/id/quaternary/myworkshopfiles/" target="_blank">Steam Workshop</a></li>
 	</ul>
 </section>
+<div style="text-align: right; font-size:60%;">*Yes, really.</div>
 {{>shell_end.template.html}}

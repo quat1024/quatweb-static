@@ -3,7 +3,7 @@
 <p>{{#many}}All {{count}} posts!{{/many}}{{^many}}The post!{{/many}} See also: the <a href="/tags">tag index</a>.</p>
 <ul>
 {{#posts}}
-<li {{#draft}}style="opacity: 0.5"{{/draft}}>{{created_date}} <a href="/posts/{{slug}}">{{title}}</a> {{#draft}}(DRAFT){{/draft}}<br/>
+<li {{#draft}}style="opacity: 0.5"{{/draft}}><span class="date">{{created_date}}</span> <a href="/posts/{{slug}}">{{title}}</a> {{#draft}}(DRAFT){{/draft}}<br/>
 	{{blurb}}
 </li>
 {{/posts}}
