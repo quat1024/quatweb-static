@@ -3,6 +3,7 @@ title=Updating to Fabric 1.18 notes
 author=quat
 description=Aggregated notes on updating mods to Fabric 1.18
 created_date=Nov 30, 2021
+updated_date=Dec 03, 2021
 tags=fabric,1.18,mc-modding
 ---
 I want to get off Mx. Mojang's Wild Ride
@@ -92,4 +93,56 @@ mappings loom.layered() {
 
 I don't think there is a Parchment release for 1.18 yet. Parchment releases for the wrong version actually still work, though (more or less).
 
-The auto remapper is a *little* busted so you might have some things to fix manually. Most things having to do with Mixin do not get remapped.
+Some sharp edges with the auto remapper:
+
+* If you played with Java 16 Records in your 1.17 mod, Mercury currently blows up on them. Use the intellij intention to convert them to normal classes, remap, then convert back.
+* `@Inject` targets and some other Mixin string-things don't get remapped.
+
+# Fabric API
+
+## Tool Tags
+
+`fabric-tool-tags` has been deprecated. It still works, for now, but is marked `Deprecated(forRemoval = true)`. I encourage you to migrate to the vanilla `mineable/blah` block tags now, before you *have* to do it. Throw em in your datagen if you want. (fabric-api JUST landed some datagen tools, btw)
+
+`fabric-mining-level-api` adds additional `fabric:mineable/sword` and `fabric:mineable/shears` block tags.
+
+## Block Entity Syncing
+
+`BlockEntityClientSerializable` is gone 🦀
+
+The reason it existed in the first place was that `BlockEntity#getUpdatePacket` was not pluggable by mods, and it was hard to convince the game to actually sync your block entity data with the client. 1.18 changed `getUpdatePacket` so mods can use it, meaning a workaround is no longer needed.
+
+There is a general-purpose block entity syncing vanilla packet, mojang name `ClientboundBlockEntityDataPacket`. It calls `BlockEntity#getUpdateTag` on the server and sends the resulting compound tag to the client, which proceeds to call the normal `BlockEntity#load` method on the client world with it.
+
+Many vanilla `BlockEntity`s have this boilerplate:
+
+```java
+@Override
+public Packet<ClientGamePacketListener> getUpdatePacket() {
+	return ClientboundBlockEntityDataPacket.create(this);
+}
+
+@Override
+public CompoundTag getUpdateTag() {
+	//calls into "saveAdditional", which is the mojang name for
+	//the general-purpose "write my data to NBT" method on BlockEntities
+	//that you are familiar with
+	return saveWithoutMetadata();
+}
+```
+
+This setup will sync the entirety of the server's NBT tag (save the redundant `id` and `x`/`y`/`z` fields, which aren't written when using `saveWithoutMetadata`) to the client. If you don't want to send the *entire* tag, return something different in `getUpdateTag` (see: the campfire).
+
+Calling `level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);` will fire the server-to-client sync packet, just like what `BlockEntityClientSerializable#sync` did. That's kind of a mouthful of a method name, and you typically want to call it in the same contexts you'd mark the chunk dirty in, so many vanilla `BlockEntity`s have this helper method defined as well:
+
+```java
+//(not an @Override!)
+private void markUpdated() {
+	//you may know this one as "markDirty":
+	setChanged();
+	//causes the update packet to be sent:
+	level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+}
+```
+
+Know that the vanilla `ClientboundBlockEntityDataPacket` calls the same `load` method that loading a `BlockEntity` on the server calls. (You are free to make your own `Packet<?>` and return it in `getUpdatePacket`, although it's a bit awkward because I don't know if you can use the fabric-api convention of custom payload packets here.)
